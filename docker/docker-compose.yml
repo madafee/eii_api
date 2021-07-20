@@ -1,0 +1,61 @@
+version: '3'
+services:
+    api:
+        image: ${BASE_IMAGE}
+        ports:
+            - "${BASE_PORT}:5000"
+        volumes:
+            # 映射本地时区
+            - /etc/localtime:/etc/localtime
+            - ${LOGPATH}:/opt/log
+        links:
+            - db
+        depends_on:
+            - db
+        env_file:
+            - ../config.list
+        logging:
+            driver: json-file
+            options:
+              max-size: 5g
+        environment:
+            # 设置显示输出编码为UTF8
+            - PYTHONIOENCODING=utf-8
+            # 服务进程数
+            - WORKERS=${WORKERS}
+        networks:
+            - service_net
+
+    db:
+        image: docker.dlyunzhi.cn:7114/common/mysql
+        ports:
+            - "${DB_PORT}:3306"
+        command:
+            - --max_allowed_packet=128M
+            - --default-authentication-plugin=mysql_native_password
+            - --mysqlx-max-connections=1000
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+            - --binlog_expire_logs_seconds=3
+            - --innodb_purge_threads=32
+            - --innodb_max_purge_lag=2000000
+        volumes:
+            - /etc/localtime:/etc/localtime
+            - ${DB_PATH}/${PROJECT_NAME}:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=abcd1234
+            - MYSQL_USER=dlyunzhi
+            - MYSQL_PASSWORD=abcd1234
+            - MYSQL_DATABASE=${PROJECT_NAME}
+        networks:
+            - service_net
+
+networks:
+  service_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 128.123.14.51/27
+
+
